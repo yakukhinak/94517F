@@ -1,5 +1,7 @@
 #include "main.h"
+#include "pros/misc.h"
 #include "robodash/views/console.hpp"
+
 
 /////
 // For installation, upgrading, documentations, and tutorials, check out our website!
@@ -8,8 +10,11 @@
 
 //ctrl+h  ctrl+i  for highlight
 
+bool driver = true;
 rd::Console Brain; 
-rd::Console Blank;
+rd::Console Odom;
+rd::Image image2("/usd/catresize.bin", "CAT");
+
 //you can have more than one consle use one for odom!!!
 
 // Chassis constructor
@@ -39,6 +44,19 @@ ez::Drive chassis(
 
  rd::Selector selector({
   {"Auton 1", odom_test},
+  {"Auton 2", drive_example},
+  {"Auton 3", turn_example},
+  {"Auton 4", drive_and_turn},
+  {"Auton 5", wait_until_change_speed},
+  {"Auton 6", swing_example},
+  {"Auton 7", motion_chaining},
+  {"Auton 8", combining_movements},
+  {"Auton 9", interfered_example},
+  {"Auton 10", odom_drive_example},
+  {"Auton 11", odom_pure_pursuit_example},
+  {"Auton 12", odom_pure_pursuit_wait_until_example},
+  {"Auton 13", odom_boomerang_example},
+  {"Auton 14", odom_boomerang_injected_pure_pursuit_example}
 });
 
 
@@ -69,8 +87,8 @@ void initialize() {
   // These are already defaulted to these buttons, but you can change the left/right curve buttons here!
   // chassis.opcontrol_curve_buttons_left_set(pros::E_CONTROLLER_DIGITAL_LEFT, pros::E_CONTROLLER_DIGITAL_RIGHT);  // If using tank, only the left side is used.
   // chassis.opcontrol_curve_buttons_right_set(pros::E_CONTROLLER_DIGITAL_Y, pros::E_CONTROLLER_DIGITAL_A);
-  rd::Image image1("/usd/AlienCats.bin", "ALIENCAT");
-  rd::Image image2("/usd/catresize.bin", "CAT");
+  //rd::Image image1("/usd/AlienCats.bin", "ALIENCAT");
+  //rd::Image image2("/usd/catresize.bin", "CAT");
   // Autonomous Selector using LLEMU
   /*ez::as::auton_selector.autons_add({
       {"odom test", odom_test},
@@ -94,6 +112,7 @@ void initialize() {
   // Initialize chassis and auton selector
   chassis.initialize();
   //ez::as::initialize();
+  pros::Task ez_screen([](void*){ ez_screen_task(); }, nullptr, "EZ Screen");
   
   master.rumble(chassis.drive_imu_calibrated() ? "." : "---");
 }
@@ -178,8 +197,8 @@ void ez_screen_task() {
     if (!pros::competition::is_connected()) {
       
       // Clear and print new odom data to the Robodash console
-      Brain.clear();
-      Brain.printf("x: %.2f\ny: %.2f\na: %.2f\n", 
+      Odom.clear();
+      Odom.printf("x: %.2f\ny: %.2f\na: %.2f\n", 
                      chassis.odom_x_get(), 
                      chassis.odom_y_get(), 
                      chassis.odom_theta_get());
@@ -201,7 +220,7 @@ void ez_screen_task() {
  */
 void ez_template_extras() {
   // Only run this when not connected to a competition switch
-  if (!pros::competition::is_connected()) {
+  if (!pros::competition::is_connected() && !driver) {
     // PID Tuner
     // - after you find values that you're happy with, you'll have to set them in auton.cpp
 
@@ -218,10 +237,6 @@ void ez_template_extras() {
       autonomous();
       chassis.drive_brake_set(preference);
     }
-
-    if (master.get_digital(DIGITAL_A) && (master.get_digital(DIGITAL_LEFT))) {
-     ez_screen_task();
-  }
 
     // Allow PID Tuner to iterate
     chassis.pid_tuner_iterate();
@@ -251,8 +266,43 @@ void ez_template_extras() {
  /*slector = rd::Selector selector({{"Left", nullptr}, {"Right", nullptr}});
  rd::Console console("Console");
  rd::View image_view("Images");*/
+ void selector_control(){
+  if (master.get_digital_new_press(DIGITAL_R1)) {
+    selector.next_auton();
+    selector.focus();
+  }
+  if (master.get_digital_new_press(DIGITAL_R2)) {
+    selector.prev_auton();
+    selector.focus();
+  }
+}
+
+/*void Distance_print() {
+  while (true) {
+    if (!pros::competition::is_connected() && !driver)  {
+      Brain.clear();
+      Brain.printf("Distance front_right: %.2f mm \n", front_right.get());
+      Brain.printf("Distance front_left: %.2f mm \n", front_left.get());
+      Brain.printf("Distance left_s: %.2f mm \n", left_s.get());
+      Brain.printf("Distance right_s: %.2f mm \n", right_s.get());
+    }
+     else {
+        Brain.print("Sensor error - check ports\n");
+      pros::delay(20);
+}
+}
+}*/
+
+std::vector<std::function<void()>> screen_views = {
+    []() { selector.focus(); },
+    []() { Brain.focus(); },
+    []() { Odom.focus(); },
+    []() { image2.focus(); }
+};
 
 int screenCounter = 0;
+//[]() { Distance.focus(); },
+//free singal seletctor controls Y, RIGHT, UP
 void opcontrol() {
   // This is preference to what you like to drive on
   chassis.drive_brake_set(MOTOR_BRAKE_COAST);
@@ -260,7 +310,6 @@ void opcontrol() {
   while (true) {
     // Gives you some extras to make EZ-Template ezier
     //if (master.get_digital_new_press(DIGITAL_RIGHT) && master.get_digital(DIGITAL_Y))
-      ez_template_extras();
 
     //chassis.opcontrol_tank();  // Tank control
      chassis.opcontrol_arcade_standard(ez::SPLIT);   // Standard split arcade
@@ -271,10 +320,25 @@ void opcontrol() {
     // . . .
     // Put more user control code here!
     // . . .
-    if (master.get_digital_new_press(DIGITAL_L1)) {
-            selector.focus(); 
-        }
+    if (master.get_digital_new_press(DIGITAL_A) && (!pros::competition::is_connected())) {
+      driver = !driver;
+      Brain.clear();
+      Brain.printf(
+        "Driver mode: %s", driver ? "ON" : "OFF");
+    }
+    if (!driver){
+      if (master.get_digital_new_press(DIGITAL_L1)) {
+            screenCounter = (screenCounter + 1) % screen_views.size();
+            screen_views[screenCounter]();
+      }
+      if (screenCounter == 0) {
+        selector_control();
+      }
+      //Distance_print();
+      ez_template_extras();
 
-    pros::delay(ez::util::DELAY_TIME);  // This is used for timer calculations!  Keep this ez::util::DELAY_TIME
+  // This is used for timer calculations!  Keep this ez::util::DELAY_TIME
+  }
+    pros::delay(ez::util::DELAY_TIME);
   }
 }

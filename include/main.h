@@ -49,6 +49,7 @@
 #include "subsystems.hpp"
 #include "robodash/api.h"
 #include "liblvgl/lvgl.h"
+#include "selector.hpp"
 extern rd::Console Brain;
 
 
