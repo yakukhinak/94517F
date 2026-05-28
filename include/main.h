@@ -50,7 +50,25 @@
 #include "robodash/api.h"
 #include "liblvgl/lvgl.h"
 #include "selector.hpp"
+extern bool driver;
 extern rd::Console Brain;
+extern rd::Console Odom;
+extern rd::Image image2;
+extern ez::Drive chassis;
+extern ez::tracking_wheel horiz_tracker;
+extern ez::tracking_wheel vert_tracker;
+extern rd::Selector selector;
+extern std::vector<std::function<void()>> screen_views;
+extern int screenCounter;
+
+/*extern double front_right_off_y = -7;//og 3.25
+extern double front_left_off_y = -7;//og 2.25
+extern double front_right_off_x = -3.25;//new
+extern double front_left_off_x = 2.25;//new
+extern double left_off_y = -1.0;
+extern double right_off_y = -1.0;
+extern double left_off_x = 8;//new
+extern double right_off_x = -7.5;//new*/
 
 
 /**

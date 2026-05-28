@@ -1,6 +1,9 @@
 #include "main.h"
 #include "pros/misc.h"
 #include "robodash/views/console.hpp"
+#include "dsr.hpp"
+#include "autons.hpp"
+#include "selector.hpp"
 
 
 /////
@@ -10,6 +13,16 @@
 
 //ctrl+h  ctrl+i  for highlight
 
+/*added externs to all teh following: extern bool driver;
+extern rd::Console Brain;
+extern rd::Console Odom;
+extern rd::Image image2;
+extern ez::Drive chassis;
+extern ez::tracking_wheel horiz_tracker;
+extern ez::tracking_wheel vert_tracker;
+extern rd::Selector selector;
+extern std::vector<std::function<void()>> screen_views;
+extern int screenCounter;*/
 bool driver = true;
 rd::Console Brain; 
 rd::Console Odom;
@@ -42,11 +55,13 @@ ez::Drive chassis(
  * to keep execution time for this mode under a few seconds.
  */
 
- rd::Selector selector({
+rd::Selector selector({
+  {"Odom Angular Set", odom_angular_set},
   {"Auton 1", odom_test},
-  {"Auton 2", drive_example},
-  {"Auton 3", turn_example},
-  {"Auton 4", drive_and_turn},
+  {"DSR", dsr_test},
+  {"drive example", drive_example},
+  {"turn example", turn_example},
+  {"drive and turn", drive_and_turn},
   {"Auton 5", wait_until_change_speed},
   {"Auton 6", swing_example},
   {"Auton 7", motion_chaining},
@@ -56,8 +71,10 @@ ez::Drive chassis(
   {"Auton 11", odom_pure_pursuit_example},
   {"Auton 12", odom_pure_pursuit_wait_until_example},
   {"Auton 13", odom_boomerang_example},
-  {"Auton 14", odom_boomerang_injected_pure_pursuit_example}
+  {"Auton 14", odom_boomerang_injected_pure_pursuit_example},
+  {"Get Pose", pose_get}
 });
+
 
 
 void initialize() {
@@ -89,25 +106,6 @@ void initialize() {
   // chassis.opcontrol_curve_buttons_right_set(pros::E_CONTROLLER_DIGITAL_Y, pros::E_CONTROLLER_DIGITAL_A);
   //rd::Image image1("/usd/AlienCats.bin", "ALIENCAT");
   //rd::Image image2("/usd/catresize.bin", "CAT");
-  // Autonomous Selector using LLEMU
-  /*ez::as::auton_selector.autons_add({
-      {"odom test", odom_test},
-      {"Drive\n\nDrive forward and come back", drive_example},
-      {"Turn\n\nTurn 3 times.", turn_example},
-      {"Drive and Turn\n\nDrive forward, turn, come back", drive_and_turn},
-      {"Drive and Turn\n\nSlow down during drive", wait_until_change_speed},
-      {"Swing Turn\n\nSwing in an 'S' curve", swing_example},
-      {"Motion Chaining\n\nDrive forward, turn, and come back, but blend everything together :D", motion_chaining},
-      {"Combine all 3 movements", combining_movements},
-      {"Interference\n\nAfter driving forward, robot performs differently if interfered or not", interfered_example},
-      {"Simple Odom\n\nThis is the same as the drive example, but it uses odom instead!", odom_drive_example},
-      {"Pure Pursuit\n\nGo to (0, 30) and pass through (6, 10) on the way.  Come back to (0, 0)", odom_pure_pursuit_example},
-      {"Pure Pursuit Wait Until\n\nGo to (24, 24) but start running an intake once the robot passes (12, 24)", odom_pure_pursuit_wait_until_example},
-      {"Boomerang\n\nGo to (0, 24, 45) then come back to (0, 0, 0)", odom_boomerang_example},
-      {"Boomerang Pure Pursuit\n\nGo to (0, 24, 45) on the way to (24, 24) then come back to (0, 0, 0)", odom_boomerang_injected_pure_pursuit_example},
-      //{"Measure Offsets\n\nThis will turn the robot a bunch of times and calculate your offsets for your tracking wheels.", measure_offsets},
-  });*/
-
 
   // Initialize chassis and auton selector
   chassis.initialize();
@@ -157,6 +155,7 @@ void autonomous() {
   chassis.odom_xyt_set(0_in, 0_in, 0_deg);    // Set the current position, you can start at a specific position with this
   chassis.drive_brake_set(MOTOR_BRAKE_HOLD);  // Set motors to hold.  This helps autonomous consistency
 
+  
   /*
   Odometry and Pure Pursuit are not magic
 
@@ -173,125 +172,8 @@ void autonomous() {
   //ez::as::auton_selector.selected_auton_call();  // Calls selected auton from autonomous selector
 }
 
-/**
- * Simplifies printing tracker values to the brain screen
- */
-void screen_print_tracker(ez::tracking_wheel *tracker, std::string name, int line) {
-  std::string tracker_value = "", tracker_width = "";
-  // Check if the tracker exists
-  if (tracker != nullptr) {
-    tracker_value = name + " tracker: " + util::to_string_with_precision(tracker->get());             // Make text for the tracker value
-    tracker_width = "  width: " + util::to_string_with_precision(tracker->distance_to_center_get());  // Make text for the distance to center
-  }
-  //ez::screen_print(tracker_value + tracker_width, line);  // Print final tracker text
-}
 
-/**
- * Ez screen task
- * Adding new pages here will let you view them during user control or autonomous
- * and will help you debug problems you're having
- */
-void ez_screen_task() {
- while (true) {
-    // Check if we want to debug (e.g., not in competition)
-    if (!pros::competition::is_connected()) {
-      
-      // Clear and print new odom data to the Robodash console
-      Odom.clear();
-      Odom.printf("x: %.2f\ny: %.2f\na: %.2f\n", 
-                     chassis.odom_x_get(), 
-                     chassis.odom_y_get(), 
-                     chassis.odom_theta_get());
-                     
-      // Add your tracker logic here using console.println()
-    }
-    pros::delay(20);
-  }
-}
 
-//pros::Task ezScreenTask(ez_screen_task);
-
-/**
- * Gives you some extras to run in your opcontrol:
- * - run your autonomous routine in opcontrol by pressing DOWN and B
- *   - to prevent this from accidentally happening at a competition, this
- *     is only enabled when you're not connected to competition control.
- * - gives you a GUI to change your PID values live by pressing X
- */
-void ez_template_extras() {
-  // Only run this when not connected to a competition switch
-  if (!pros::competition::is_connected() && !driver) {
-    // PID Tuner
-    // - after you find values that you're happy with, you'll have to set them in auton.cpp
-
-    // Enable / Disable PID Tuner
-    //  When enabled:
-    //  * use A and Y to increment / decrement the constants
-    //  * use the arrow keys to navigate the constants
-    if (master.get_digital_new_press(DIGITAL_X))
-      chassis.pid_tuner_toggle();
-
-    // Trigger the selected autonomous routine
-    if (master.get_digital(DIGITAL_B) && master.get_digital(DIGITAL_DOWN)) {
-      pros::motor_brake_mode_e_t preference = chassis.drive_brake_get();
-      autonomous();
-      chassis.drive_brake_set(preference);
-    }
-
-    // Allow PID Tuner to iterate
-    chassis.pid_tuner_iterate();
-  }
-
-  // Disable PID Tuner when connected to a comp switch
-  else {
-    if (chassis.pid_tuner_enabled())
-      chassis.pid_tuner_disable();
-  }
-}
-//}
-
-/**
- * Runs the operator control code. This function will be started in its own task
- * with the default priority and stack size whenever the robot is enabled via
- * the Field Management System or the VEX Competition Switch in the operator
- * control mode.
- *
- * If no competition control is connected, this function will run immediately
- * following initialize().
- *
- * If the robot is disabled or communications is lost, the
- * operator control task will be stopped. Re-enabling the robot will restart the
- * task, not resume it from where it left off.
- */
- /*slector = rd::Selector selector({{"Left", nullptr}, {"Right", nullptr}});
- rd::Console console("Console");
- rd::View image_view("Images");*/
- void selector_control(){
-  if (master.get_digital_new_press(DIGITAL_R1)) {
-    selector.next_auton();
-    selector.focus();
-  }
-  if (master.get_digital_new_press(DIGITAL_R2)) {
-    selector.prev_auton();
-    selector.focus();
-  }
-}
-
-/*void Distance_print() {
-  while (true) {
-    if (!pros::competition::is_connected() && !driver)  {
-      Brain.clear();
-      Brain.printf("Distance front_right: %.2f mm \n", front_right.get());
-      Brain.printf("Distance front_left: %.2f mm \n", front_left.get());
-      Brain.printf("Distance left_s: %.2f mm \n", left_s.get());
-      Brain.printf("Distance right_s: %.2f mm \n", right_s.get());
-    }
-     else {
-        Brain.print("Sensor error - check ports\n");
-      pros::delay(20);
-}
-}
-}*/
 
 std::vector<std::function<void()>> screen_views = {
     []() { selector.focus(); },
@@ -320,25 +202,26 @@ void opcontrol() {
     // . . .
     // Put more user control code here!
     // . . .
-    if (master.get_digital_new_press(DIGITAL_A) && (!pros::competition::is_connected())) {
+    if (master.get_digital_new_press(DIGITAL_L2) && (!pros::competition::is_connected())) {
       driver = !driver;
       Brain.clear();
       Brain.printf(
-        "Driver mode: %s", driver ? "ON" : "OFF");
+        "Driver mode: %s", driver ? "ON" : "OFF\n");
     }
     if (!driver){
       if (master.get_digital_new_press(DIGITAL_L1)) {
             screenCounter = (screenCounter + 1) % screen_views.size();
             screen_views[screenCounter]();
       }
-      if (screenCounter == 0) {
-        selector_control();
+      if (master.get_digital_new_press(DIGITAL_L2)) {
+        screenCounter = (screenCounter - 1) % screen_views.size();
+            screen_views[screenCounter]();
       }
       //Distance_print();
       ez_template_extras();
 
   // This is used for timer calculations!  Keep this ez::util::DELAY_TIME
   }
-    pros::delay(ez::util::DELAY_TIME);
+    pros::delay(50);
   }
 }
