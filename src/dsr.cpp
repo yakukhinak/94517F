@@ -12,11 +12,11 @@ double front_right_off_x = -3.25;//new
 double front_left_off_x = 2.25;//new
 double left_off_y = -1.0;
 double right_off_y = -1.0;
-double left_off_x = 8;//new
-double right_off_x = -7.5;//new
+double left_off_x = -7.5;//new
+double right_off_x = 7.5;//new
 
 //double sensor_distance = 5.5;
-double field = 70.0; 
+double field = 72.0; 
 
 
 

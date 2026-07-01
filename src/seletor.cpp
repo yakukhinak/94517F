@@ -3,6 +3,9 @@
 #include "robodash/views/console.hpp"
 //#include "main.cpp"
 
+//MAKE MOTOR TEMP DISPLAY
+//CHANGE AUTO SELECTOR CONTROL
+
 
 void screen_print_tracker(ez::tracking_wheel *tracker, std::string name, int line) {
   std::string tracker_value = "", tracker_width = "";

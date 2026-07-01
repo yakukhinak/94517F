@@ -56,25 +56,26 @@ void dsr_test(){
   chassis.odom_xyt_set(0_in, 0_in, 0_deg);
   resetAngle(180);
   pros::delay(500);
-  resetX(right_s, -7.5, false);
+  resetX(right_s, -1, false);
   resetY(front_left, -7, true);
   Brain.printf("after reset x: %f\n ", chassis.odom_x_get());
+  Brain.printf("after reset y: %f\n", chassis.odom_y_get());
   pros::delay(500);
 
-  chassis.pid_odom_set({{{0_in, -30_in, 270_deg}, fwd, DRIVE_SPEED}});
+  chassis.pid_odom_set({{{0_in, -30_in, 90_deg}, fwd, DRIVE_SPEED}});
   chassis.pid_wait();
 
   resetAngle(-90);
   pros::delay(500);
   resetX(front_left, -3.25, false);
-  resetY(left_s, -1, true);
+  resetY(left_s, -7, true);
   //failin bc sensor cant see that far
   Brain.printf("after reset x: %f\n", chassis.odom_x_get());
-  Brain.printf("after reset y: %f\n", chassis.odom_y_get());
+  
   //pros::delay(500);
 
-  chassis.pid_odom_set({{{62_in, -43_in, 180_deg}, fwd, DRIVE_SPEED}});
-  chassis.pid_wait();
+  //chassis.pid_odom_set({{{62_in, -43_in, 180_deg}, fwd, DRIVE_SPEED}});
+  //chassis.pid_wait();
 }
 
 void pose_get(){

@@ -32,13 +32,12 @@ rd::Image image2("/usd/catresize.bin", "CAT");
 
 // Chassis constructor
 ez::Drive chassis(
-    // These are your drive motors, the first motor is used for sensing!
-    {1,-2,-5},     // Left Chassis Ports (negative port will reverse it!)
-    {8,9,-10},  // Right Chassis Ports (negative port will reverse it!)
+    {1,-2,-5},                               // Left Chassis Ports (negative port will reverse it!)
+    {8,9,-10},                      // Right Chassis Ports (negative port will reverse it!)
 
-    13,      // IMU Port
-    4.125,  // Wheel Diameter (Remember, 4" wheels without screw holes are actually 4.125!)
-    343);   // Wheel RPM = cartridge * (motor gear / wheel gear)
+    13,                                              // IMU Port
+    4.125,                                      // Wheel Diameter (Remember, 4" wheels without screw holes are actually 4.125!)
+    360);                                                // Wheel RPM = cartridge * (motor gear / wheel gear)
 
 // Uncomment the trackers you're using here!
 // - `8` and `9` are smart ports (making these negative will reverse the sensor)
@@ -194,7 +193,7 @@ void opcontrol() {
     //if (master.get_digital_new_press(DIGITAL_RIGHT) && master.get_digital(DIGITAL_Y))
 
     //chassis.opcontrol_tank();  // Tank control
-     chassis.opcontrol_arcade_standard(ez::SPLIT);   // Standard split arcade
+    //chassis.opcontrol_arcade_standard(ez::SPLIT);   // Standard split arcade
     //chassis.opcontrol_arcade_standard(ez::SINGLE);  // Standard single arcade
     // chassis.opcontrol_arcade_flipped(ez::SPLIT);    // Flipped split arcade
     // chassis.opcontrol_arcade_flipped(ez::SINGLE);   // Flipped single arcade
